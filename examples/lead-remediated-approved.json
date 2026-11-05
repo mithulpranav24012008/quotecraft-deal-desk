@@ -1,0 +1,38 @@
+{
+  "quote_id": "QC-2026-108R",
+  "agency_name": "Northlight Creative",
+  "client_name": "NovaPay Fintech",
+  "client_contact": "Maya Lin, VP of Marketing",
+  "project_title": "Series B Launch Video & Interactive Product Tour (Revised)",
+  "summary": "60-second 3D motion launch video, interactive WebGL hero product tour for novapay.io, and custom sound design under expedited 5-day Rush SLA.",
+  "date": "2026-11-05",
+  "delivery_days": 5,
+  "revision_rounds": 2,
+  "upfront_pct": 50,
+  "discount_pct": 10,
+  "rush_fee_pct": 25,
+  "status": "FINAL_APPROVED",
+  "approved_by": "namikazeluffy",
+  "items": [
+    {
+      "deliverable": "Creative Direction, Script & 3D Storyboard",
+      "role": "Creative Direction & Strategy",
+      "hours": 16
+    },
+    {
+      "deliverable": "60s 3D Motion Launch Film (4K + Vertical Cut)",
+      "role": "3D / Motion Graphics & Animation",
+      "hours": 40
+    },
+    {
+      "deliverable": "Interactive WebGL Product Tour Component",
+      "role": "Full-Stack Web / Interactive Build",
+      "hours": 28
+    },
+    {
+      "deliverable": "Bespoke Sound Design, VO & Spatial Mix",
+      "role": "Sound Design, Voiceover & Mastering",
+      "hours": 12
+    }
+  ]
+}

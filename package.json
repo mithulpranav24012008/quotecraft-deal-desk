@@ -1,0 +1,13 @@
+{
+  "name": "quotecraft-deal-desk",
+  "version": "1.0.0",
+  "description": "QuoteCraft — Agency Lead-to-Quote & Margin Desk for Switch (Flip the Switch Hackathon, Track 01)",
+  "type": "module",
+  "scripts": {
+    "check:trap": "node render_quote.mjs examples/lead-trap-discount.json --check",
+    "example": "node render_quote.mjs examples/lead-trap-discount.json --out-dir ./out/trap && node render_quote.mjs examples/lead-remediated-approved.json --out-dir ./out/approved"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

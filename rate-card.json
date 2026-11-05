@@ -1,0 +1,31 @@
+{
+  "agency_name": "Northlight Creative",
+  "min_margin_pct": 45,
+  "max_discount_pct": 15,
+  "rush_threshold_days": 7,
+  "rush_fee_pct": 25,
+  "max_revision_rounds": 2,
+  "min_upfront_pct": 50,
+  "roles": {
+    "Creative Direction & Strategy": {
+      "internal_cost_rate": 65,
+      "client_list_rate": 160
+    },
+    "3D / Motion Graphics & Animation": {
+      "internal_cost_rate": 75,
+      "client_list_rate": 175
+    },
+    "Full-Stack Web / Interactive Build": {
+      "internal_cost_rate": 70,
+      "client_list_rate": 165
+    },
+    "Sound Design, Voiceover & Mastering": {
+      "internal_cost_rate": 55,
+      "client_list_rate": 130
+    },
+    "QA, Revisions & Launch Support": {
+      "internal_cost_rate": 50,
+      "client_list_rate": 120
+    }
+  }
+}

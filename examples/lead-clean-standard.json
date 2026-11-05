@@ -1,0 +1,31 @@
+{
+  "quote_id": "QC-2026-109",
+  "agency_name": "Northlight Creative",
+  "client_name": "Helios Cloud Robotics",
+  "client_contact": "Devon Brooks, Head of Product",
+  "project_title": "Q4 Developer Conference Keynote Visuals & Microsite",
+  "summary": "3D stage loop animations, 45-second product reveal teaser, and responsive registration microsite for Helios DevCon.",
+  "date": "2026-11-05",
+  "delivery_days": 14,
+  "revision_rounds": 2,
+  "upfront_pct": 50,
+  "discount_pct": 5,
+  "rush_fee_pct": 0,
+  "items": [
+    {
+      "deliverable": "Keynote Visual Identity & Storyboard",
+      "role": "Creative Direction & Strategy",
+      "hours": 12
+    },
+    {
+      "deliverable": "45s 3D Robotics Reveal Film + Stage Loops",
+      "role": "3D / Motion Graphics & Animation",
+      "hours": 32
+    },
+    {
+      "deliverable": "DevCon Interactive Registration Microsite",
+      "role": "Full-Stack Web / Interactive Build",
+      "hours": 20
+    }
+  ]
+}

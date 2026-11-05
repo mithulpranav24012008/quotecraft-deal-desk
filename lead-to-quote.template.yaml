@@ -1,0 +1,201 @@
+# Track 01 — QuoteCraft: Agency Lead-to-Quote & Margin Desk (`lead-to-quote.template.yaml`)
+#
+# A Switch v2 template that stands up a complete agency Deal Desk & Proposal Room:
+# - Two specialized agents (`scoper` and `margin_auditor`)
+# - A collaborative room (`{agency}-deal-desk`) bridged to Discord/Slack/Mattermost
+# - Two exclusive room roles (`solutions-scoper` and `margin-auditor`)
+# - A pre-seeded `rate-card-and-policy` room document; `scoper` creates `deal-<quote_id>`
+#   documents on intake (so it owns and can update them via `update_room_document`), while
+#   `margin_auditor` runs `node render_quote.mjs <deal.json> --check` and posts its verdict
+#   in the room thread.
+
+version: 2
+
+params:
+  agency:
+    type: string
+    label: Agency or team prefix
+    description: Short lowercase prefix used for the room and agent names (e.g., northlight, studio, acme).
+    default: northlight
+    pattern: "[a-z][a-z0-9-]*"
+  min_margin_pct:
+    type: number
+    label: Minimum gross margin (%)
+    description: The gross-margin floor (%) enforced by the Margin Auditor before a quote can be approved.
+    default: 45
+    min: 10
+    max: 90
+  repo_url:
+    type: string
+    label: QuoteCraft repository URL
+    description: Git repository cloned into the agents' working directories containing render_quote.mjs and rate-card.json.
+    default: https://github.com/mithulpranav24012008/quotecraft-deal-desk
+    input: advanced
+  bridge:
+    type: bridge
+    label: Messaging app
+    description: Where the Deal Desk room is mirrored (Discord, Slack, Teams, or Mattermost).
+    default: [$first]
+  provider:
+    type: provider
+    description: The coding agent provider backing the Deal Desk agents.
+    default: [claude, codex, opencode]
+    input: advanced
+  machine:
+    type: machine
+    description: The machine the Deal Desk agents run on.
+    default: [$first]
+    input: advanced
+  scoper_directory:
+    type: directory
+    description: Working directory for the Solutions Scoper agent.
+    default: "{$agents_dir}/{scoper.name}"
+    input: advanced
+  auditor_directory:
+    type: directory
+    description: Working directory for the Margin Auditor agent.
+    default: "{$agents_dir}/{margin_auditor.name}"
+    input: advanced
+
+form:
+  advanced: { label: Advanced, open: false }
+
+resources:
+  scoper:
+    type: agent
+    name: "{agency}-scoper"
+    display_name: "{agency} Solutions Scoper"
+    description: >-
+      Turns raw client inquiries into itemized scopes, creates and updates per-deal
+      room documents, and renders PNG/PDF quote packages with render_quote.mjs.
+    provider: "{provider}"
+    machine: "{machine}"
+    directory: "{scoper_directory}"
+    repo: "{repo_url}"
+    addressing:
+      anyone_in: [deal_desk]
+    instructions: |
+      You are the Solutions Scoper for {agency}'s Deal Desk.
+      At kickoff, run `npm install` if `node_modules` is missing and assume the
+      `solutions-scoper` role in the room (`assume_role`).
+
+      When a prospect inquiry or revision arrives in the room:
+      1. Read `rate-card-and-policy` (`load_internal_documents`) and `rate-card.json`
+         in your working directory.
+      2. If essential intake details are missing (e.g., deliverable count or target
+         deadline), ask at most 2 crisp clarifying questions in the thread. Otherwise,
+         scope the deal immediately.
+      3. Write the structured JSON deal payload (`deal-<quote_id>.json`) referencing
+         only exact role names from `rate-card.json` (never hard-code rates—the engine
+         looks up cost and list rates from `rate-card.json`).
+      4. Run the deterministic quote engine:
+         `node render_quote.mjs deal-<quote_id>.json --out-dir ./out`
+      5. Create or update the per-deal room document `deal-<quote_id>` (`create_room_document`
+         on first pass; `update_room_document` on revisions—you are the creator of this doc)
+         with the exact JSON block and computed numbers from `out/computed-deal.json`.
+      6. Attach `out/quote-card.png` (and `out/quote-proposal.pdf` once approved or
+         requested) to the thread using `send_attachment`.
+      7. Hand off to @{margin_auditor.name} (`send_targeted_message`) to verify the
+         deal before asking {$creator} for final sign-off.
+
+  margin_auditor:
+    type: agent
+    name: "{agency}-auditor"
+    display_name: "{agency} Margin Auditor"
+    description: >-
+      Runs render_quote.mjs --check against rate-card.json to audit every draft quote
+      against the gross-margin floor, discount cap, revision cap, and rush-delivery rules.
+    provider: "{provider}"
+    machine: "{machine}"
+    directory: "{auditor_directory}"
+    repo: "{repo_url}"
+    addressing:
+      anyone_in: [deal_desk]
+    instructions: |
+      You are the Margin & Risk Auditor for {agency}'s Deal Desk.
+      At kickoff, assume the `margin-auditor` role in the room (`assume_role`).
+      You never write or render quotes yourself, and you never edit the scoper's
+      `deal-<quote_id>` room document (since `update_room_document` is creator-only).
+      Your job is to protect the agency from bad deals, unpriced scope creep, and
+      margin erosion using deterministic code checks.
+
+      Whenever @{scoper.name} posts or updates a `deal-<quote_id>` room document:
+      1. Load `rate-card-and-policy` and `deal-<quote_id>` (`load_internal_documents`).
+      2. Save the deal JSON from `deal-<quote_id>` and run:
+         `node render_quote.mjs deal-<quote_id>.json --check`
+         Quote the script's exact computed numbers (`netClientPrice`, `totalInternalCost`,
+         `grossMarginPct`, and `violations`)—never do arithmetic in your head.
+      3. If `status` is `MARGIN_HOLD` (or any violation is returned), post a sharp,
+         numbered `⛔ MARGIN HOLD` verdict in the thread quoting the exact dollar/margin
+         shortfall from `--check`, and state two concrete counter-offer options (e.g.,
+         Option A: enforce the +25% Rush SLA and cap discount at 10%; Option B: trim
+         scope hours) for {$creator} to decide.
+      4. If `status` is `AUDIT_PASSED` (or after {$creator} approves a remediated scope),
+         post `✅ AUDIT PASSED` in the thread and prompt {$creator} for final release.
+
+  deal_desk:
+    type: room
+    name: "{agency}-deal-desk"
+    description: "Lead-to-Quote & Margin Desk for {agency} (min margin: {min_margin_pct}%)"
+    channel_type: channel_private
+    bridge: "{bridge}"
+    agents: [scoper, margin_auditor]
+    aliases:
+      scoper: scoper
+      margin_auditor: auditor
+    users:
+      - if: "{bridge}"
+        value: ["{$creator}"]
+      - value: []
+    instructions: |
+      This room runs {agency}'s Lead-to-Quote & Margin Desk.
+      - @{scoper.name} (`@scoper`) owns intake, scoping, creating/updating `deal-<quote_id>`
+        room documents, and rendering the visual Deal Card (.png) and Client Proposal (.pdf)
+        via `node render_quote.mjs`.
+      - @{margin_auditor.name} (`@auditor`) audits every draft quote using
+        `node render_quote.mjs <deal.json> --check` against `rate-card.json` and posts its
+        verdict in the thread (never editing the scoper's document).
+      - Only {$creator} can approve releasing a final quote or overriding a `MARGIN_HOLD`.
+    roles:
+      - name: solutions-scoper
+        exclusive: true
+        instructions: |
+          Scope incoming client leads against `rate-card.json`, create/update the
+          `deal-<quote_id>` room document, render `quote-card.png` and `quote-proposal.pdf`
+          with `node render_quote.mjs`, and hand off to `margin-auditor` before requesting
+          owner approval.
+      - name: margin-auditor
+        exclusive: true
+        instructions: |
+          Run `node render_quote.mjs <deal.json> --check` on every draft scope in
+          `deal-<quote_id>`. Quote the script's exact numbers in the thread, block any
+          quote with violations (`MARGIN_HOLD`), and present concrete remediation options
+          to the room owner.
+    docs:
+      - name: rate-card-and-policy
+        description: "Official agency rate card, internal hourly costs, margin floor, and SLA rules"
+        instructions: "Read-only policy reference mirrored in rate-card.json. Do not modify rates without owner approval."
+        content: |
+          # {agency} Official Rate Card & Deal Desk Policy
+
+          ## 1. Role Rates & Internal Cost Baseline (`rate-card.json`)
+          | Role / Deliverable | Internal Cost (/hr) | Client List Rate (/hr) | Standard Margin |
+          | :--- | :---: | :---: | :---: |
+          | Creative Direction & Strategy | $65/hr | $160/hr | 59.4% |
+          | 3D / Motion Graphics & Animation | $75/hr | $175/hr | 57.1% |
+          | Full-Stack Web / Interactive Build | $70/hr | $165/hr | 57.6% |
+          | Sound Design, Voiceover & Mastering | $55/hr | $130/hr | 57.7% |
+          | QA, Revisions & Launch Support | $50/hr | $120/hr | 58.3% |
+
+          ## 2. Mandatory Deal Desk Guardrails (Enforced by `render_quote.mjs`)
+          1. **Gross Margin Floor:** Net Gross Margin `(Net Client Price - Total Internal Cost) / Net Client Price` MUST be **>= {min_margin_pct}%**. Any quote below {min_margin_pct}% triggers an automatic `MARGIN_HOLD`.
+          2. **Discount Cap:** Discretionary discounts above **15%** require either scope reduction or explicit owner override.
+          3. **Rush Delivery Surcharge:** Any deadline under **7 business days** requires a **+25% Rush SLA fee**.
+          4. **Revision Cap:** Standard fixed-price quotes include at most **2 rounds of revisions**.
+          5. **Payment Terms:** Minimum **50% upfront deposit** before production starts (`50% upfront / 50% on delivery`).
+    kickoff: |
+      @{scoper.name} @{margin_auditor.name} — welcome to the {agency} Lead-to-Quote & Margin Desk.
+
+      @{scoper.name}: assume the `solutions-scoper` role, confirm `rate-card.json` is loaded, and state in one line what you create when a lead arrives.
+
+      @{margin_auditor.name}: assume the `margin-auditor` role and state in one line how you verify every deal with `render_quote.mjs --check` before {$creator} signs off.

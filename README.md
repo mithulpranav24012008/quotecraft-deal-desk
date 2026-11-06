@@ -4,16 +4,16 @@
 
 > **The problem:** Small agencies and studios lose margin in chat. A prospect sends a rushed inquiry asking for a "25% partner discount, 5-day turnaround, and 4 rounds of revisions." A salesperson or solo founder eyeballs a number, sends a quote, and only realizes mid-project that internal delivery hours and rush overtime wiped out their profit margin.
 >
-> **The Switch solution:** **QuoteCraft** turns a Discord, Slack, or Mattermost channel into a human-gated **Lead-to-Quote & Margin Desk** powered by two adversarial Switch roles (`solutions-scoper` and `margin-auditor`), persistent room documents (`rate-card-and-policy` and `active-deal-sheet`), and a sub-second visual quote & SOW renderer (`render_quote.mjs`).
+> **The Switch solution:** **QuoteCraft** turns a Discord, Slack, or Mattermost channel into a human-gated **Lead-to-Quote & Margin Desk** powered by two adversarial Switch roles (`solutions-scoper` and `margin-auditor`), persistent room documents (`rate-card-and-policy` and per-deal `deal-<quote_id>` docs), and a sub-second visual quote & SOW renderer (`render_quote.mjs`).
 
 ---
 
 ## Why This Workflow Stops Working Without Switch
 
-1. **Shared, Load-Bearing Room Documents (`rate-card-and-policy` + `active-deal-sheet`):**
+1. **Shared, Load-Bearing Room Documents (`rate-card-and-policy` + `deal-<quote_id>`):**
    - Both agents read the agency's live rate card (internal hourly cost vs. client list rate, mandatory **45% gross-margin floor**, **15% max discretionary discount**, **+25% Rush SLA fee** for `< 7` business days, **2-round revision cap**, and **50% upfront payment rule**) stored directly in the Switch room.
 2. **Adversarial Role Separation (`solutions-scoper` vs. `margin-auditor`):**
-   - **`solutions-scoper`** maps incoming prospect inquiries into itemized deliverables, updates `active-deal-sheet`, and renders a high-resolution **Deal & Margin Audit Card (`quote-card.png`)** + **Statement of Work (`quote-proposal.pdf`)** right into the thread via `send_attachment`.
+   - **`solutions-scoper`** maps incoming prospect inquiries into itemized deliverables, creates/updates the per-deal `deal-<quote_id>` room document, and renders a high-resolution **Deal & Margin Audit Card (`quote-card.png`)** + **Statement of Work (`quote-proposal.pdf`)** right into the thread via `send_attachment`.
    - **`margin-auditor`** never writes quotes—it independently recomputes internal cost vs. net client revenue and places the deal on **`⛔ MARGIN_HOLD`** if any policy guardrail fails, presenting concrete counter-offer options to the agency owner.
 3. **Human Owner Gate in Chat (Voice-Driven with Wispr Flow):**
    - No quote leaves the desk until the agency owner breaks the tie in Discord/Slack (e.g., dictating via **Wispr Flow**: *"Go with Option A—add the 25% rush fee, cap revisions at 2 rounds, give them a 10% partner discount, and issue the final PDF"*).
@@ -46,7 +46,7 @@ create_room_from_yaml(yaml_content=open("lead-to-quote.template.yaml").read())
 The template automatically provisions:
 - `{agency}-scoper` (assumes `solutions-scoper`)
 - `{agency}-auditor` (assumes `margin-auditor`)
-- `{agency}-deal-desk` bridged to your Discord/Slack workspace with `rate-card-and-policy` and `active-deal-sheet` pre-loaded.
+- `{agency}-deal-desk` bridged to your Discord/Slack workspace with `rate-card-and-policy` pre-loaded (and `deal-<quote_id>` room documents created per lead).
 
 ### 2. Test the Standalone Visual Quote & PDF Renderer
 Any agent in the room calls `render_quote.mjs` to produce the visual Discord card and client PDF in ~400–850 ms:

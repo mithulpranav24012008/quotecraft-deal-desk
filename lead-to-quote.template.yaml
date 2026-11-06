@@ -89,7 +89,7 @@ resources:
          only exact role names from `rate-card.json` (never hard-code rates—the engine
          looks up cost and list rates from `rate-card.json`).
       4. Run the deterministic quote engine:
-         `node render_quote.mjs deal-<quote_id>.json --out-dir ./out`
+         `node render_quote.mjs deal-<quote_id>.json --min-margin {min_margin_pct} --out-dir ./out`
       5. Create or update the per-deal room document `deal-<quote_id>` (`create_room_document`
          on first pass; `update_room_document` on revisions—you are the creator of this doc)
          with the exact JSON block and computed numbers from `out/computed-deal.json`.
@@ -122,7 +122,7 @@ resources:
       Whenever @{scoper.name} posts or updates a `deal-<quote_id>` room document:
       1. Load `rate-card-and-policy` and `deal-<quote_id>` (`load_internal_documents`).
       2. Save the deal JSON from `deal-<quote_id>` and run:
-         `node render_quote.mjs deal-<quote_id>.json --check`
+         `node render_quote.mjs deal-<quote_id>.json --min-margin {min_margin_pct} --check`
          Quote the script's exact computed numbers (`netClientPrice`, `totalInternalCost`,
          `grossMarginPct`, and `violations`)—never do arithmetic in your head.
       3. If `status` is `MARGIN_HOLD` (or any violation is returned), post a sharp,
@@ -151,10 +151,10 @@ resources:
       This room runs {agency}'s Lead-to-Quote & Margin Desk.
       - @{scoper.name} (`@scoper`) owns intake, scoping, creating/updating `deal-<quote_id>`
         room documents, and rendering the visual Deal Card (.png) and Client Proposal (.pdf)
-        via `node render_quote.mjs`.
+        via `node render_quote.mjs <deal.json> --min-margin {min_margin_pct}`.
       - @{margin_auditor.name} (`@auditor`) audits every draft quote using
-        `node render_quote.mjs <deal.json> --check` against `rate-card.json` and posts its
-        verdict in the thread (never editing the scoper's document).
+        `node render_quote.mjs <deal.json> --min-margin {min_margin_pct} --check` against
+        `rate-card.json` and posts its verdict in the thread (never editing the scoper's document).
       - Only {$creator} can approve releasing a final quote or overriding a `MARGIN_HOLD`.
     roles:
       - name: solutions-scoper
@@ -162,15 +162,15 @@ resources:
         instructions: |
           Scope incoming client leads against `rate-card.json`, create/update the
           `deal-<quote_id>` room document, render `quote-card.png` and `quote-proposal.pdf`
-          with `node render_quote.mjs`, and hand off to `margin-auditor` before requesting
-          owner approval.
+          with `node render_quote.mjs <deal.json> --min-margin {min_margin_pct}`, and hand off
+          to `margin-auditor` before requesting owner approval.
       - name: margin-auditor
         exclusive: true
         instructions: |
-          Run `node render_quote.mjs <deal.json> --check` on every draft scope in
-          `deal-<quote_id>`. Quote the script's exact numbers in the thread, block any
-          quote with violations (`MARGIN_HOLD`), and present concrete remediation options
-          to the room owner.
+          Run `node render_quote.mjs <deal.json> --min-margin {min_margin_pct} --check` on
+          every draft scope in `deal-<quote_id>`. Quote the script's exact numbers in the
+          thread, block any quote with violations (`MARGIN_HOLD`), and present concrete
+          remediation options to the room owner.
     docs:
       - name: rate-card-and-policy
         description: "Official agency rate card, internal hourly costs, margin floor, and SLA rules"

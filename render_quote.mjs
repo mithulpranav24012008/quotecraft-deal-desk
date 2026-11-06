@@ -3,12 +3,12 @@
  * QuoteCraft Deal Desk Engine & Renderer (`render_quote.mjs`)
  *
  * Usage:
- *   node render_quote.mjs <deal.json> [--out-dir ./out] [--rate-card ./rate-card.json] [--check]
+ *   node render_quote.mjs <deal.json> [--out-dir ./out] [--rate-card ./rate-card.json] [--min-margin <pct>] [--check]
  *
  * 1. Looks up every deliverable's role in `rate-card.json` (refuses unknown roles so the AI
  *    cannot invent or mistype hourly cost/list rates).
  * 2. Deterministically computes internal cost, list price, rush fees, discounts, and gross margin %,
- *    and checks all 5 Deal Desk policy guardrails.
+ *    and checks all 5 Deal Desk policy guardrails (`--min-margin` overrides `rate-card.json`'s floor).
  * 3. With `--check`, prints `computed-deal.json` to stdout without launching a browser.
  * 4. Otherwise, uses Playwright (headless Chromium) to render:
  *    - `<out-dir>/quote-card.png`     — 1200x760 Retina dark-mode Deal & Margin Audit Card
@@ -42,8 +42,11 @@ const fmtCurrency = (n) =>
 
 const fmtPct = (n) => `${n.toFixed(1)}%`;
 
-function computeDeal(raw, rateCard) {
-  const minMarginPct = Number(rateCard.min_margin_pct ?? 45);
+function computeDeal(raw, rateCard, minMarginOverride) {
+  const minMarginPct =
+    minMarginOverride !== undefined && !Number.isNaN(minMarginOverride)
+      ? Number(minMarginOverride)
+      : Number(rateCard.min_margin_pct ?? 45);
   const maxDiscountPct = Number(rateCard.max_discount_pct ?? 15);
   const rushThresholdDays = Number(rateCard.rush_threshold_days ?? 7);
   const requiredRushFeePct = Number(rateCard.rush_fee_pct ?? 25);
@@ -726,7 +729,7 @@ async function main() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
     console.error(
-      "Usage: node render_quote.mjs <deal.json> [--out-dir ./out] [--rate-card ./rate-card.json] [--check]"
+      "Usage: node render_quote.mjs <deal.json> [--out-dir ./out] [--rate-card ./rate-card.json] [--min-margin <pct>] [--check]"
     );
     process.exit(1);
   }
@@ -742,10 +745,18 @@ async function main() {
   const outDir = path.resolve(
     outIdx !== -1 && args[outIdx + 1] ? args[outIdx + 1] : "./out"
   );
+  let minMarginOverride;
+  const marginIdx = args.indexOf("--min-margin");
+  if (marginIdx !== -1 && args[marginIdx + 1] !== undefined) {
+    minMarginOverride = Number(args[marginIdx + 1]);
+  } else {
+    const eqArg = args.find((a) => a.startsWith("--min-margin="));
+    if (eqArg) minMarginOverride = Number(eqArg.split("=")[1]);
+  }
 
   const raw = JSON.parse(fs.readFileSync(inputPath, "utf8"));
   const rateCard = JSON.parse(fs.readFileSync(rateCardPath, "utf8"));
-  const computed = computeDeal(raw, rateCard);
+  const computed = computeDeal(raw, rateCard, minMarginOverride);
 
   if (checkOnly) {
     console.log(JSON.stringify(computed, null, 2));
